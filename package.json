@@ -2,7 +2,7 @@
   "name": "ecs-cdk-ci-cd",
   "version": "0.1.0",
   "bin": {
-    "ecs-cdk-ci-cd": "bin/ecs-cdk-ci-cd.js"
+    "ecs-cdk-ci-cd": "bin/stack.js"
   },
   "scripts": {
     "build": "tsc",
