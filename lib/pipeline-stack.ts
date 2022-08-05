@@ -5,7 +5,7 @@ import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import { CodeBuildAction, GitHubSourceAction } from 'aws-cdk-lib/aws-codepipeline-actions';
 import { BuildSpec } from 'aws-cdk-lib/aws-codebuild';
 
-export class EcsCdkCiCdStack extends Stack {
+export class PipelineStack extends Stack {
   public readonly projectName: string = this.node.tryGetContext('projectname');
   public readonly deploymentStage: string = this.node.tryGetContext('env');
 
@@ -35,23 +35,23 @@ export class EcsCdkCiCdStack extends Stack {
 
     const buildStageArtifacts = new codepipeline.Artifact();
 
+    const InstallDependencies = new CodeBuildAction({
+      actionName: 'InstallDependencies',
+      input: gitHubSourceArtifacts,
+      outputs: [buildStageArtifacts],
+      project: new codebuild.PipelineProject(this, `${this.projectName}-codebld-${this.deploymentStage}`, {
+        buildSpec: BuildSpec.fromSourceFilename('codebuild.yml'),
+        environment: {
+          buildImage: codebuild.LinuxBuildImage.STANDARD_5_0,
+          computeType: codebuild.ComputeType.SMALL,
+        },
+        timeout: Duration.minutes(5),
+      }),
+    });
+
     pipeline.addStage({
       stageName: 'Build',
-      actions: [
-        new CodeBuildAction({
-          actionName: 'InstallDependencies',
-          input: gitHubSourceArtifacts,
-          outputs: [buildStageArtifacts],
-          project: new codebuild.PipelineProject(this, `${this.projectName}-codebld-${this.deploymentStage}`, {
-            buildSpec: BuildSpec.fromSourceFilename('codebuild.yml'),
-            environment: {
-              buildImage: codebuild.LinuxBuildImage.STANDARD_5_0,
-              computeType: codebuild.ComputeType.SMALL,
-            },
-            timeout: Duration.minutes(5),
-          }),
-        }),
-      ],
+      actions: [InstallDependencies],
     });
   }
 }
