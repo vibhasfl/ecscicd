@@ -17,6 +17,7 @@
     ]
   },
   "context": {
+    "@aws-cdk/core:bootstrapQualifier": "ad051b4ce",
     "@aws-cdk/aws-apigateway:usagePlanKeyOrderInsensitiveId": true,
     "@aws-cdk/core:stackRelativeExports": true,
     "@aws-cdk/aws-rds:lowercaseDbIdentifier": true,
