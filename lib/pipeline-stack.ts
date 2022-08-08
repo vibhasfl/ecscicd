@@ -3,7 +3,7 @@ import { Duration, SecretValue, Stack } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
-import { CodeBuildAction, GitHubSourceAction } from 'aws-cdk-lib/aws-codepipeline-actions';
+import { CodeBuildAction, EcsDeployAction, GitHubSourceAction } from 'aws-cdk-lib/aws-codepipeline-actions';
 import { BuildSpec } from 'aws-cdk-lib/aws-codebuild';
 
 type PipelineProps = {
@@ -42,7 +42,7 @@ export class PipelineStack extends Construct {
       actions: [gitHubSourceAction],
     });
 
-    // const buildStageArtifacts = new codepipeline.Artifact();
+    const buildStageArtifacts = new codepipeline.Artifact();
 
     const codeBuildProject = new codebuild.PipelineProject(this, `${this.projectName}-codebld-${this.deploymentStage}`, {
       buildSpec: BuildSpec.fromSourceFilename('codebuild.yml'),
@@ -57,6 +57,7 @@ export class PipelineStack extends Construct {
         ACCOUNT_ID: { value: Stack.of(this).account },
         IMAGE_NAME: { value: this.projectName },
         STAGE: { value: this.deploymentStage },
+        CONTAINER_NAME: { value: `${this.projectName}-express-${this.deploymentStage}` },
       },
       timeout: Duration.minutes(10),
     });
@@ -66,13 +67,23 @@ export class PipelineStack extends Construct {
     const DockerBuild = new CodeBuildAction({
       actionName: 'Dockerbuild',
       input: gitHubSourceArtifacts,
-      // outputs: [buildStageArtifacts],
+      outputs: [buildStageArtifacts],
       project: codeBuildProject,
     });
 
     pipeline.addStage({
       stageName: 'Build',
       actions: [DockerBuild],
+    });
+
+    const ecsDeployAction = new EcsDeployAction({
+      actionName: 'ECSDeploy',
+      service: props.cluster.fargateService,
+      input: buildStageArtifacts,
+    });
+    pipeline.addStage({
+      stageName: 'Deploy',
+      actions: [ecsDeployAction],
     });
   }
 }
