@@ -55,7 +55,7 @@ export class PipelineStack extends Construct {
     Using S3 source action where user has to manually push code to S3 and build is autotriggered
     */
     const trail = new aws_cloudtrail.Trail(this, 'CloudTrail', { isMultiRegionTrail: false });
-    trail.addS3EventSelector([{ bucket: Bucket.fromBucketArn(this, 's3SourceCodeBucketevent', 'arn:aws:s3:::utlron-codebase'), objectPrefix: 'dev/latest.zip' }], {
+    trail.addS3EventSelector([{ bucket: Bucket.fromBucketArn(this, 's3SourceCodeBucketevent', `arn:aws:s3:::${this.projectName}-codebase`), objectPrefix: `${this.deploymentStage}/latest.zip` }], {
       readWriteType: aws_cloudtrail.ReadWriteType.WRITE_ONLY,
     });
 
@@ -65,8 +65,8 @@ export class PipelineStack extends Construct {
       actions: [
         new S3SourceAction({
           actionName: 'DownloadSourceCodeFromS3',
-          bucket: Bucket.fromBucketArn(this, 's3SourceCodeBucket', 'arn:aws:s3:::utlron-codebase'),
-          bucketKey: 'dev/latest.zip',
+          bucket: Bucket.fromBucketArn(this, 's3SourceCodeBucket', `arn:aws:s3:::${this.projectName}-codebase`),
+          bucketKey: `${this.deploymentStage}/latest.zip`,
           output: codebaseSourceArtifacts,
           trigger: S3Trigger.EVENTS,
         }),
