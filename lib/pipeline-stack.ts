@@ -1,10 +1,11 @@
 import { Cluster } from './cluster';
-import { Duration, SecretValue, Stack } from 'aws-cdk-lib';
+import { aws_cloudtrail, Duration, SecretValue, Stack } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
-import { CodeBuildAction, EcsDeployAction, GitHubSourceAction, GitHubTrigger } from 'aws-cdk-lib/aws-codepipeline-actions';
+import { CodeBuildAction, EcsDeployAction, GitHubSourceAction, GitHubTrigger, S3SourceAction, S3Trigger } from 'aws-cdk-lib/aws-codepipeline-actions';
 import { BuildSpec } from 'aws-cdk-lib/aws-codebuild';
+import { Bucket } from 'aws-cdk-lib/aws-s3';
 
 type PipelineProps = {
   cluster: Cluster;
@@ -26,21 +27,44 @@ export class PipelineStack extends Construct {
       crossAccountKeys: false,
     });
 
-    const gitHubSourceArtifacts = new codepipeline.Artifact();
+    // const codebaseSourceArtifacts = new codepipeline.Artifact();
 
-    const gitHubSourceAction = new GitHubSourceAction({
-      actionName: 'DownloadSourceCode',
-      owner: 'vibhasfl',
-      repo: 'cicddemoapps',
-      oauthToken: SecretValue.secretsManager('github', { jsonField: 'githuboauthtoken' }),
-      branch: 'dev',
-      output: gitHubSourceArtifacts,
-      // trigger: GitHubTrigger.NONE,
+    // const gitHubSourceAction = new GitHubSourceAction({
+    //   actionName: 'DownloadSourceCode',
+    //   owner: 'vibhasfl',
+    //   repo: 'cicddemoapps',
+    //   oauthToken: SecretValue.secretsManager('github', { jsonField: 'githuboauthtoken' }),
+    //   branch: 'dev',
+    //   output: codebaseSourceArtifacts,
+    //   // trigger: GitHubTrigger.NONE,
+    // });
+
+    // pipeline.addStage({
+    //   stageName: 'Source',
+    //   actions: [gitHubSourceAction],
+    // });
+
+    // new codebuild.GitHubSourceCredentials(this, 'CodeBuildGitHubCreds', {
+    //   accessToken: SecretValue.secretsManager('github', { jsonField: 'githuboauthtoken' }),
+    // });
+
+    const trail = new aws_cloudtrail.Trail(this, 'CloudTrail');
+    trail.addS3EventSelector([{ bucket: Bucket.fromBucketArn(this, 's3SourceCodeBucketevent', 'arn:aws:s3:::utlron-codebase'), objectPrefix: 'dev/latest.zip' }], {
+      readWriteType: aws_cloudtrail.ReadWriteType.WRITE_ONLY,
     });
 
+    const codebaseSourceArtifacts = new codepipeline.Artifact();
     pipeline.addStage({
       stageName: 'Source',
-      actions: [gitHubSourceAction],
+      actions: [
+        new S3SourceAction({
+          actionName: 'DownloadSourceCodeFromS3',
+          bucket: Bucket.fromBucketArn(this, 's3SourceCodeBucket', 'arn:aws:s3:::utlron-codebase'),
+          bucketKey: 'dev/latest.zip',
+          output: codebaseSourceArtifacts,
+          trigger: S3Trigger.EVENTS,
+        }),
+      ],
     });
 
     const buildStageArtifacts = new codepipeline.Artifact();
@@ -68,7 +92,7 @@ export class PipelineStack extends Construct {
 
     const DockerBuild = new CodeBuildAction({
       actionName: 'Dockerbuild',
-      input: gitHubSourceArtifacts,
+      input: codebaseSourceArtifacts,
       outputs: [buildStageArtifacts],
       project: codeBuildProject,
     });
