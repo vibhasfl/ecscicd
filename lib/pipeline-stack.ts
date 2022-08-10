@@ -27,28 +27,34 @@ export class PipelineStack extends Construct {
       crossAccountKeys: false,
     });
 
-    // const codebaseSourceArtifacts = new codepipeline.Artifact();
+    /*
+    * Using GithubSourceAction where code would auto fetch artifacts when commit push to master
+    const codebaseSourceArtifacts = new codepipeline.Artifact();
 
-    // const gitHubSourceAction = new GitHubSourceAction({
-    //   actionName: 'DownloadSourceCode',
-    //   owner: 'vibhasfl',
-    //   repo: 'cicddemoapps',
-    //   oauthToken: SecretValue.secretsManager('github', { jsonField: 'githuboauthtoken' }),
-    //   branch: 'dev',
-    //   output: codebaseSourceArtifacts,
-    //   // trigger: GitHubTrigger.NONE,
-    // });
+    const gitHubSourceAction = new GitHubSourceAction({
+      actionName: 'DownloadSourceCode',
+      owner: 'vibhasfl',
+      repo: 'cicddemoapps',
+      oauthToken: SecretValue.secretsManager('github', { jsonField: 'githuboauthtoken' }),
+      branch: 'dev',
+      output: codebaseSourceArtifacts,
+      // trigger: GitHubTrigger.NONE,
+    });
 
-    // pipeline.addStage({
-    //   stageName: 'Source',
-    //   actions: [gitHubSourceAction],
-    // });
+    pipeline.addStage({
+      stageName: 'Source',
+      actions: [gitHubSourceAction],
+    });
 
-    // new codebuild.GitHubSourceCredentials(this, 'CodeBuildGitHubCreds', {
-    //   accessToken: SecretValue.secretsManager('github', { jsonField: 'githuboauthtoken' }),
-    // });
+    new codebuild.GitHubSourceCredentials(this, 'CodeBuildGitHubCreds', {
+      accessToken: SecretValue.secretsManager('github', { jsonField: 'githuboauthtoken' }),
+    });
+    */
 
-    const trail = new aws_cloudtrail.Trail(this, 'CloudTrail');
+    /*
+    Using S3 source action where user has to manually push code to S3 and build is autotriggered
+    */
+    const trail = new aws_cloudtrail.Trail(this, 'CloudTrail', { isMultiRegionTrail: false });
     trail.addS3EventSelector([{ bucket: Bucket.fromBucketArn(this, 's3SourceCodeBucketevent', 'arn:aws:s3:::utlron-codebase'), objectPrefix: 'dev/latest.zip' }], {
       readWriteType: aws_cloudtrail.ReadWriteType.WRITE_ONLY,
     });
