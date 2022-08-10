@@ -3,7 +3,7 @@ import { Duration, SecretValue, Stack } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
-import { CodeBuildAction, EcsDeployAction, GitHubSourceAction } from 'aws-cdk-lib/aws-codepipeline-actions';
+import { CodeBuildAction, EcsDeployAction, GitHubSourceAction, GitHubTrigger } from 'aws-cdk-lib/aws-codepipeline-actions';
 import { BuildSpec } from 'aws-cdk-lib/aws-codebuild';
 
 type PipelineProps = {
@@ -35,6 +35,7 @@ export class PipelineStack extends Construct {
       oauthToken: SecretValue.secretsManager('github', { jsonField: 'githuboauthtoken' }),
       branch: 'dev',
       output: gitHubSourceArtifacts,
+      // trigger: GitHubTrigger.NONE,
     });
 
     pipeline.addStage({
@@ -45,6 +46,7 @@ export class PipelineStack extends Construct {
     const buildStageArtifacts = new codepipeline.Artifact();
 
     const codeBuildProject = new codebuild.PipelineProject(this, `${this.projectName}-codebld-${this.deploymentStage}`, {
+      projectName: `${this.projectName}-codebld-${this.deploymentStage}`,
       buildSpec: BuildSpec.fromSourceFilename('codebuild.yml'),
       environment: {
         buildImage: codebuild.LinuxBuildImage.STANDARD_5_0,
